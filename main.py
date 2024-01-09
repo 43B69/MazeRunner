@@ -4,6 +4,7 @@ import sys
 import os
 from random import choice, randint
 from copy import deepcopy
+from math import atan2, pi
 
 
 class Camera:
@@ -92,7 +93,8 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(0, 0)
         self.speed = 1
 
-    def update(self, *arg):
+    def update(self, arg):
+        print(arg)
         if arg[0] == pygame.K_UP:
             self.rect = self.rect.move(0, -self.speed)
         if arg[0] == pygame.K_DOWN:
@@ -102,7 +104,11 @@ class Player(pygame.sprite.Sprite):
         if arg[0] == pygame.K_RIGHT:
             self.rect = self.rect.move(self.speed, 0)
         if arg[0] == 0:
-            pass
+            ar = list(arg[1])
+            ar[0], ar[1] = ar[0] - 250, -1 * (ar[1] - 250)
+            #(ar[0], ar[1])
+            angle = atan2(ar[1], ar[0]) * 180 / pi
+            self.image = pygame.transform.rotate(self.image, angle)
 
 
 # --- Maze Board class ---
@@ -262,22 +268,29 @@ board.generate_level()
 running = True
 player = Player(100, 100)
 camera = Camera()
+last_mouse_pos = 0
 
 while running:
-    clock.tick(120)
+    clock.tick(20)
     screen.fill(BLACK)
     KEYS = pygame.key.get_pressed()
     if KEYS[pygame.K_UP]:
-        player.update(pygame.K_UP)
+        player.update([pygame.K_UP])
     if KEYS[pygame.K_DOWN]:
-        player.update(pygame.K_DOWN)
+        player.update([pygame.K_DOWN])
     if KEYS[pygame.K_LEFT]:
-        player.update(pygame.K_LEFT)
+        player.update([pygame.K_LEFT])
     if KEYS[pygame.K_RIGHT]:
-        player.update(pygame.K_RIGHT)
+        player.update([pygame.K_RIGHT])
+    # Mouse_actual_pos = pygame.mouse.get_pos()
+    # if Mouse_actual_pos != last_mouse_pos:
+    #     player.update([0, Mouse_actual_pos])
+    #     last_mouse_pos = Mouse_actual_pos
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.MOUSEMOTION:
+            player.update([0, event.pos])
     camera.update(player)
     for sprite in all_sprites:
         camera.apply(sprite)
