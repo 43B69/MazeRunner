@@ -47,3 +47,6 @@ MazeRunner - это двухмерный top-down шутер с элемента
 8.Придумать привлекательный дизайн
 <br>
 9.Реализовать сохранение прогресса
+
+## Презентация
+https://docs.google.com/presentation/d/1Nzi3OTsH4wjMJDPeUXRJVqlTSzLzsMcN/edit?usp=sharing&ouid=104575406481742414998&rtpof=true&sd=true
