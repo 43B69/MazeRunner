@@ -219,6 +219,8 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(
             cell_size * pos_x, cell_size * pos_y)
         self.speed = 5
+        self.max_hp = 10
+        self.hp = 10
         self._walls_groups = walls_groups
         self.orig = self.image
 
@@ -249,7 +251,10 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.transform.rotate(self.orig, self.alpha)
         self.rect = self.image.get_rect(center=self.rect.center)
 
-
+    def render(self):
+        x, y = self.rect.center
+        len_line_hp = (150*self.hp)/self.max_hp
+        pygame.draw.line(screen, RED, (x-75, y-80), (x-75+len_line_hp, y-80), 10)
 # class OrdinaryZombie(pygame.sprite.Sprite):
 #     def __init__(self, pos):
 #         pygame.sprite.Sprite.__init__(self, zombie_group, all_sprites)
@@ -305,8 +310,9 @@ class Player(pygame.sprite.Sprite):
 class OrdinaryZombie2(pygame.sprite.Sprite):
     def __init__(self, image, pos_mouse):
         super().__init__(zombie_group, all_sprites)
-        self.image = pygame.transform.rotate(load_image(image), -90)
+        self.image = load_image(image)
         self.orig = self.image
+        self.timer_att = threading.Thread(target=self.time_effect)
         self.rect = self.image.get_rect()
         self.rect = self.rect.move(pos_mouse[0], pos_mouse[1])
         self.mask = pygame.mask.from_surface(self.image)
@@ -315,11 +321,15 @@ class OrdinaryZombie2(pygame.sprite.Sprite):
         self.number_wave = 3
         self.destination = ()
         self.flag_algoritm = False
+        self.go_flag = True
+        self.hp = 10
+        self.max_hp = 10
         self.speed = 5
         self.x2 = 0
         self.y2 = 0
         self.center = ()
         self.count = 0
+        self.damage = 1
         self.board = [[0] * self.width for i in range(self.height)]
         self.wave_board = [[0] * self.width for i in range(self.height)]
         self.cortage_wave_board = [[0] * self.width for i in range(self.height)]
@@ -407,79 +417,83 @@ class OrdinaryZombie2(pygame.sprite.Sprite):
         return self.way(x1, y1, px, py, ct)
 
     def run(self, pos_player):
-        x, y = self.rect.center
-        px, py = pos_player
-        delta_x = (px-x) / 15
-        delta_y = (py-y) / 15
-        direction = (x, y) - Vector2(px, py)
-        radius, angle = direction.as_polar()
-        flag = True
-        for j in range(15):
-            for sprite1 in wall_sprite.sprites():
-                sx, sy, w, h = sprite1.rect
-                if sx+w > (x + j * delta_x) > sx and sy < (y + j * delta_y) < sy+h:
-                    flag = False
-                    break
-            if not flag:
-                break
-        delta_f_x = 70
-        if flag:
-            for i in range(4):
-                for j in range(15):
-                    for sprite1 in wall_sprite.sprites():
-                        sx, sy, w, h = sprite1.rect
-                        if sx + w > (x + delta_f_x + j * delta_x) > sx and sy < (y + j * delta_y) < sy + h:
-                            flag = False
-                            break
-                    if not flag:
+        if self.go_flag:
+            x, y = self.rect.center
+            px, py = pos_player
+            delta_x = (px - x) / 15
+            delta_y = (py - y) / 15
+            direction = (x, y) - Vector2(px, py)
+            radius, angle = direction.as_polar()
+            flag = True
+            for j in range(15):
+                for sprite1 in wall_sprite.sprites():
+                    sx, sy, w, h = sprite1.rect
+                    if sx + w > (x + j * delta_x) > sx and sy < (y + j * delta_y) < sy + h:
+                        flag = False
                         break
                 if not flag:
                     break
-                delta_f_x -= 35
-                if delta_f_x == 0:
-                    delta_f_x -= 35
-
-        if flag:
-            x2 = -cos(radians(-angle)) * (self.speed + 1)
-            y2 = sin(radians(-angle)) * (self.speed + 1)
-            self.rect = self.rect.move(x2, y2)
-            self.rotate(x2, y2)
-            self.flag_algoritm = False
-        else:
-            if self.flag_algoritm:
-                for sprite1 in floor_sprite.sprites():
-                    if pygame.sprite.collide_mask(self, sprite1):
-                        self.zom_pos = (sprite1.x, sprite1.y)
+            delta_f_x = 80
+            if flag:
+                for i in range(4):
+                    for j in range(15):
+                        for sprite1 in wall_sprite.sprites():
+                            sx, sy, w, h = sprite1.rect
+                            if sx + w > (x + delta_f_x + j * delta_x) > sx and sy < (y + j * delta_y) < sy + h:
+                                flag = False
+                                break
+                        if not flag:
+                            break
+                    if not flag:
                         break
-                zx, zy = self.zom_pos
-                cx, cy = self.destination
-                if zx < cx:
-                    self.x2 = self.speed
-                    self.rect = self.rect.move(self.x2, self.y2)
-                    self.rotate(self.x2, self.y2)
-                elif zx > cx:
-                    self.x2 = -self.speed
-                    self.rect = self.rect.move(self.x2, self.y2)
-                    self.rotate(self.x2, self.y2)
-                    self.count = 0
-                elif zy > cy:
-                    self.y2 = -self.speed
-                    self.rect = self.rect.move(self.x2, self.y2)
-                    self.rotate(self.x2, self.y2)
-                    self.count = 0
-                elif zy < cy:
-                    self.y2 = self.speed
-                    self.rect = self.rect.move(self.x2, self.y2)
-                    self.rotate(self.x2, self.y2)
-                    self.count = 0
-                else:
-                    self.count += 1
-                    self.rect = self.rect.move(self.x2, self.y2)
-                    if self.count == 25:
-                        self.x2 = 0
-                        self.y2 = 0
-                        self.flag_algoritm = False
+                    delta_f_x -= 40
+                    if delta_f_x == 0:
+                        delta_f_x -= 40
+
+            if flag:
+                x2 = -cos(radians(-angle)) * (self.speed + 1)
+                y2 = sin(radians(-angle)) * (self.speed + 1)
+                self.rect = self.rect.move(x2, y2)
+                self.rotate(x2, y2)
+                self.flag_algoritm = False
+            else:
+                if self.flag_algoritm:
+                    for sprite1 in floor_sprite.sprites():
+                        if pygame.sprite.collide_mask(self, sprite1):
+                            self.zom_pos = (sprite1.x, sprite1.y)
+                            break
+                    zx, zy = self.zom_pos
+                    cx, cy = self.destination
+                    if zx < cx:
+                        self.x2 = self.speed
+                        self.rect = self.rect.move(self.x2, self.y2)
+                        self.rotate(self.x2, self.y2)
+                    elif zx > cx:
+                        self.x2 = -self.speed
+                        self.rect = self.rect.move(self.x2, self.y2)
+                        self.rotate(self.x2, self.y2)
                         self.count = 0
+                    elif zy > cy:
+                        self.y2 = -self.speed
+                        self.rect = self.rect.move(self.x2, self.y2)
+                        self.rotate(self.x2, self.y2)
+                        self.count = 0
+                    elif zy < cy:
+                        self.y2 = self.speed
+                        self.rect = self.rect.move(self.x2, self.y2)
+                        self.rotate(self.x2, self.y2)
+                        self.count = 0
+                    else:
+                        self.count += 1
+                        self.rect = self.rect.move(self.x2, self.y2)
+                        if self.count == 25:
+                            self.x2 = 0
+                            self.y2 = 0
+                            self.flag_algoritm = False
+                            self.count = 0
+            if pygame.sprite.spritecollide(self, player_group, False):
+                self.go_flag = False
+                self.timer_att.start()
 
 
     def rotate(self, x, y):
@@ -489,21 +503,38 @@ class OrdinaryZombie2(pygame.sprite.Sprite):
         self.image = pygame.transform.rotate(self.orig, -angle + 180)
         self.rect = self.image.get_rect(center=self.rect.center)
 
+    def render(self):
+        if self.hp <= 0:
+            self.kill()
+        else:
+            x, y = self.rect.center
+            len_line_hp = (150*self.hp)/self.max_hp
+            pygame.draw.line(screen, RED, (x-75, y-80), (x-75+len_line_hp, y-80), 10)
+
+    def time_effect(self):
+        time.sleep(0.5)
+        if pygame.sprite.spritecollide(self, player_group, False):
+            player_group.sprites()[0].hp -= self.damage
+        self.go_flag = True
+        self.timer_att = threading.Thread(target=self.time_effect)
+
 
 class Arrow(pygame.sprite.Sprite):
-    def __init__(self, image):
-        super().__init__(patrons_group)
-        self.image = load_image(image)
+    def __init__(self):
+        super().__init__(patrons_group, effects_group)
+        self.image = load_image('стрела.png')
         self.rect = self.image.get_rect()
-        self.flag = False
+        self.flag = True
         self.damage = 5
         self.alpha = 90
+        self.mask = pygame.mask.from_surface(self.image)
         self.image = pygame.transform.rotate(self.image, self.alpha)
         self.timer = threading.Thread(target=self.time_effect)
 
     def set_view(self, pos_x, pos_y, alpha):
         self.alpha = alpha
         self.image = pygame.transform.rotate(self.image, self.alpha)
+        self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect(center=(pos_x+5, pos_y))
 
     def run(self):
@@ -514,6 +545,16 @@ class Arrow(pygame.sprite.Sprite):
             if pygame.sprite.spritecollide(self, wall_sprite, False):
                 self.timer.start()
                 self.flag = False
+            else:
+                for sprite2 in zombie_group.sprites():
+                    if pygame.sprite.collide_mask(self, sprite2):
+                        sprite2.hp -= self.damage
+                        self.timer.start()
+                        self.flag = False
+                        break
+
+
+
 
     def time_effect(self):
         ct = 0
@@ -596,31 +637,60 @@ class SwordIcon(WeaponIcon, pygame.sprite.Sprite):
 
 class Sword(pygame.sprite.Sprite):
     def __init__(self):
-        super().__init__()
-        self.radius = 100
+        super().__init__(effects_group)
+        self.radius = 120
         self.damage = 2
         self.image = load_image('effect_sword1.png')
         self.rect = self.image.get_rect()
         self.timer = threading.Thread(target=self.time_effect)
         self.x = 0
         self.y = 0
+        self.alpha = 0
+        self.betta = 60
+        self.posx = 0
+        self.posy = 0
+        self.flag = True
 
-    def run(self, alpha, pos):
-        effects_group.add(self)
-        self.image = pygame.transform.rotate(self.image, alpha + 135)
-        self.x = pos[0] + self.radius*cos(radians(alpha))
-        self.y = pos[1] + -self.radius*sin(radians(alpha))
-        self.rect = self.image.get_rect(center=(self.x, self.y))
+    def set_view(self, posx, posy, alpha):
+        self.alpha = alpha
+        self.x = posx + self.radius * cos(radians(alpha))
+        self.y = posy + -self.radius * sin(radians(alpha))
+        self.posx = posx
+        self.posy = posy
 
+    def run(self):
+        if self.flag:
+            self.image = pygame.transform.rotate(self.image, self.alpha + 135)
+            self.rect = self.image.get_rect(center=(self.x, self.y))
+            for sprite1 in zombie_group.sprites():
+                x, y = sprite1.rect.center
+                radius, angle = self.rotate(self.posx, self.posy, x, y)
+                if radius > self.radius:
+                    pass
+                else:
+                    new_alpha_1 = self.alpha + self.betta
+                    new_alpha_2 = self.alpha - self.betta
+                    if new_alpha_1 < 0 and new_alpha_2 < 0 and (-angle > 0):
+                        angle = -angle
+                    if min(new_alpha_1, new_alpha_2) <= -angle <= max(new_alpha_2, new_alpha_1):
+                        sprite1.hp -= self.damage
+            self.timer.start()
+            self.flag = False
+
+    def rotate(self, x1, y1, x2, y2):
+        direction = (x2, y2) - Vector2(x1, y1)
+        radius, angle = direction.as_polar()
+        return radius, angle
 
     def time_effect(self):
         ct = 0
         while True:
+            ct += 1
+            time.sleep(1)
             if ct == 1:
                 self.kill()
                 break
-            ct += 1
-            time.sleep(1)
+
 
 
 class AllInventory:
@@ -638,6 +708,8 @@ class AllInventory:
         self.inventory[0][1].add_allinventory(1, 0, self.left, self.top, self.cell_size)
         self.inventory[1][1] = SwordIcon('sword.png')
         self.inventory[1][1].add_allinventory(1, 1, self.left, self.top, self.cell_size)
+        self.inventory[1][2] = OnionIcon('лук_icon.png')
+        self.inventory[1][2].add_allinventory(2, 1, self.left, self.top, self.cell_size)
     def render(self):
         if self.flag:
             surf = pygame.Surface((W, H))
@@ -746,7 +818,6 @@ class BasicInventory(AllInventory):
     def __init__(self):
         super().__init__()
         self.basic_inventory = self.inventory[self.height-1]
-        self.height = 1
         self.top = 850
         self.binding = {pygame.K_1: 0,
                         pygame.K_2: 1,
@@ -773,7 +844,31 @@ class BasicInventory(AllInventory):
     def treatment(self, *args):
         if args[0] in self.keys:
             self.cursor = self.binding[args[0]]
-        #print(self.cursor)
+
+    def attacked_obj(self):
+        a = str(self.basic_inventory[self.cursor]).split()
+        a = a[0][1:] + a[1][:6]
+        if a == 'OnionIconSprite':
+            patron = Arrow()
+            patron.set_view(player.rect.center[0], player.rect.center[1], player.alpha)
+        if a == 'SwordIconSprite':
+            patron = Sword()
+            patron.set_view(player.rect.center[0], player.rect.center[1], player.alpha)
+            b = ''
+            # if a in connect_obj.keys():
+            #     if isinstance(connect_obj[a], dict):
+            #         for j in connect_obj[a].keys():
+            #             b = j
+            #         for y in range(self.height):
+            #             for x in range(self.width):
+            #                 if self.inventory[y][x] != 0:
+            #                     cl = str(self.inventory[y][x]).split()
+            #                     cl = cl[0][1:] + cl[1][:6]
+            #                     if cl == b:
+            #                         patron = connect_obj[a][b]
+            #                         patron.set_view(player.rect.center[0], player.rect.center[1], player.alpha)
+
+
 
 
 
@@ -810,6 +905,27 @@ def generate_level(laberinte):
     laberinte[py][px] = 1
     return new_player
 
+def generate_zombie():
+    ct = 0
+    while True:
+        ct += 1
+        if ct % 5 == 0:
+            pos_zombie = (randint(0, WIDTH-1), randint(0, HEIGHT-1))
+            while laberinte[pos_zombie[1]][pos_zombie[0]] != 1:
+                pos_zombie = (randint(0, WIDTH - 1), randint(0, HEIGHT - 1))
+            for sprite in floor_sprite.sprites():
+                if (sprite.x, sprite.y) == pos_zombie:
+                    OrdinaryZombie2('zombie_UP.png', sprite.rect.center)
+                    break
+        time.sleep(1)
+def generate_ghost():
+    # ct = 0
+    # while True:
+    #     ct += 1
+    #     if ct % 15 == 0:
+    #         OrdinaryZombie2('zombie_UP.png')
+    pass
+
 
 SIZE = W, H = (1500, 1000)
 screen = pygame.display.set_mode(SIZE)
@@ -823,10 +939,11 @@ SANDY = pygame.Color("#D39353")
 GREY_1 = pygame.Color("#808080")
 GREY_2 = pygame.Color("#C0C0C0")
 GREY_3 = pygame.Color("#C6C3B5")
+spawn_zombie = threading.Thread(target=generate_zombie)
+spawn_qhost = threading.Thread(target=generate_ghost)
 #размер кнопки
 cell_size = 300
 WIDTH = 20
-k = Arrow('стрела.png')
 HEIGHT = 15
 board = Board(20, 15)
 board.set_view(50)
@@ -839,13 +956,12 @@ MAIN_ROOM.load_sprites()
 laberinte = board.print_laberinte()
 player = generate_level(laberinte)
 MAIN_ROOM_PLAYER = Player(0, 0, MAIN_ROOM_ALL_SPRITES, MAIN_ROOM_COLLIDE_SPRITES)
-connect_obj = {'SwordIconSprite': partial(Sword)}
+connect_obj = {'SwordIconSprite': partial(Sword),
+               'OnionIconSprite': {'ArrowIconSprite': partial(Arrow)}}
 IN_MAIN_MENU = True
 IN_GAME = False
 TRANSFORM = False
 running = True
-z1 = 0
-z1_flag = False
 while running:
     clock.tick(60)
     screen.fill(BLACK)
@@ -887,6 +1003,7 @@ while running:
         TRANSFORM = False
         screen.fill("BLACK")
         IN_GAME = True
+        spawn_zombie.start()
     if IN_GAME:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -909,15 +1026,7 @@ while running:
                     # k = Arrow('стрела.png')
                     # k.set_view(player.rect.center[0], player.rect.center[1], player.alpha)
                     # k.flag = True
-                    z1 = OrdinaryZombie2('zombie-transformed.png', pygame.mouse.get_pos())
-                    pos = ()
-                    for sprite in floor_sprite.sprites():
-                        if pygame.sprite.collide_mask(sprite, player):
-                            pos = (sprite.x, sprite.y)
-                            break
-
-                    z1.set_view(20, 15, laberinte, pos)
-                    z1_flag = True
+                    basic_inventory.attacked_obj()
         if not inventory.flag:
             player.rotate()
             player.update(pygame.key.get_pressed())
@@ -944,18 +1053,22 @@ while running:
             camera.apply(sprite)
             sprite.run()
         patrons_group.draw(screen)
-        zombie_group.draw(screen)
-        if z1_flag:
-            if not z1.flag_algoritm:
+        for sprite1 in zombie_group.sprites():
+            sprite1.render()
+            if not sprite1.flag_algoritm:
                 pos = ()
                 for sprite in floor_sprite.sprites():
                     if pygame.sprite.collide_mask(sprite, player):
                         pos = (sprite.x, sprite.y)
                         break
 
-                z1.set_view(20, 15, laberinte, pos)
-                z1.flag_algoritm = True
-            z1.run(player.rect.center)
+                sprite1.set_view(20, 15, laberinte, pos)
+                sprite1.flag_algoritm = True
+            sprite1.run(player.rect.center)
+        zombie_group.draw(screen)
+        player.render()
+        for sprite1 in effects_group.sprites():
+            sprite1.run()
     pygame.display.flip()
 
 sys.exit(pygame.quit())
