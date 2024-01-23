@@ -504,6 +504,7 @@ class OrdinaryZombie2(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=self.rect.center)
 
     def render(self):
+        # ПИЗДЕЦ, ЧТО ЗА ХУЙНЯ?
         if self.hp <= 0:
             self.kill()
         else:
